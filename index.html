@@ -160,7 +160,8 @@ setTimeout(()=>{
 const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
 document.body.addEventListener("touchstart", ()=>{
     audioCtx.resume();
-},{once:true});
+    wrap.style.display="block"; // 手機第一次點擊就顯示終端機
+}, {once:true});
 
 function keySound(f=800,d=.03){
   const o=audioCtx.createOscillator(),g=audioCtx.createGain();
