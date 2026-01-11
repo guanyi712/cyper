@@ -38,7 +38,8 @@ body{
   flex-direction:column;
   align-items:center;
   justify-content:center;
-  z-index:1;
+  z-index:5;
+  pointer-events:none; /* 避免遮擋終端機 */
   animation:fadeOut 2s ease forwards;
   animation-delay:4s;
 }
@@ -64,9 +65,9 @@ body{
 /* ===== TERMINAL ===== */
 #terminal-wrap{
   position:relative;
-  z-index:2;
+  z-index:10; /* 高於 boot */
   padding:2vh 2vw;
-  display:none;
+  display:none; /* 初始隱藏 */
   height:100vh;
   box-sizing:border-box;
 }
@@ -147,20 +148,21 @@ function drawMatrix(){
     drops[i]++;
   });
 }
-setInterval(drawMatrix,70);
+setInterval(drawMatrix,100);
 
 /* ===== BOOT → LOGIN ===== */
 setTimeout(()=>{
-  wrap.style.display="block";
+  wrap.style.display="block"; // 確保終端機顯示
+  wrap.style.opacity="1";
   print("SECURE SYSTEM ONLINE");
   print("ENTER PASSWORD:");
-},4200);
+  input.focus(); // 自動聚焦輸入框
+},6000); // 等 BOOT fadeOut 完全完成
 
 /* ===== AUDIO ===== */
 const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
 document.body.addEventListener("touchstart", ()=>{
-    audioCtx.resume();
-    wrap.style.display="block"; // 手機第一次點擊就顯示終端機
+    audioCtx.resume(); // 手機第一次觸碰啟動音效
 }, {once:true});
 
 function keySound(f=800,d=.03){
@@ -190,7 +192,7 @@ function askAI(question){
   return "AI: 我不太懂你的意思...";
 }
 
-/* ===== THEME 切換 ===== */
+/* ===== THEME ===== */
 function setTheme(color){
   let fg,glow,prompt;
   switch(color){
@@ -252,3 +254,4 @@ input.addEventListener("keypress", e=>{
 
 </body>
 </html>
+
