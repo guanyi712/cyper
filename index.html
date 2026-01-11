@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>Cyber Core Terminal</title>
+<style>
+:root{
+  --fg:#4fc3ff;     /* 預設藍色 */
+  --glow:rgba(79,195,255,.7);
+  --prompt:#00bfff;
+  --font:16px;
+}
+
+body{
+  margin:0;
+  background:black;
+  color:var(--fg);
+  font-family:Consolas,monospace;
+  font-size:var(--font);
+  text-shadow:0 0 6px var(--glow);
+  overflow:hidden;
+}
+
+/* ===== Matrix 背景 ===== */
+#matrix{
+  position:fixed;
+  inset:0;
+  z-index:0;
+  opacity:0.18;
+}
+
+/* ===== BOOT LOGO ===== */
+#boot{
+  position:fixed;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  z-index:1;
+  animation:fadeOut 2s ease forwards;
+  animation-delay:4s;
+}
+
+.logo{
+  font-size:48px;
+  letter-spacing:6px;
+  animation:glow 1.5s ease-in-out infinite alternate;
+}
+
+.scanline{
+  width:300px;
+  height:2px;
+  background:var(--fg);
+  margin-top:20px;
+  animation:scan 2s linear infinite;
+}
+
+@keyframes glow{from{opacity:.6;}to{opacity:1;}}
+@keyframes scan{from{transform:translateX(-150px);}to{transform:translateX(150px);}}
+@keyframes fadeOut{to{opacity:0;visibility:hidden;}}
+
+/* ===== TERMINAL ===== */
+#terminal-wrap{
+  position:relative;
+  z-index:2;
+  padding:20px;
+  display:none;
+}
+
+#terminal{white-space:pre-wrap;}
+#input-line{display:flex;align-items:center;}
+.prompt{margin-right:6px;color:var(--prompt);}
+input{
+  background:transparent;
+  border:none;
+  outline:none;
+  color:var(--fg);
+  font-size:inherit;
+  flex:1;
+  caret-color:var(--prompt);
+}
+</style>
+</head>
+<body>
+
+<canvas id="matrix"></canvas>
+
+<div id="boot">
+  <div class="logo">CYBER CORE</div>
+  <div class="scanline"></div>
+  <div style="margin-top:20px;opacity:.6">INITIALIZING SYSTEM</div>
+</div>
+
+<div id="terminal-wrap">
+  <div id="terminal"></div>
+  <div id="input-line">
+    <span class="prompt">&gt;</span>
+    <input id="command" autofocus />
+  </div>
+</div>
+
+<script>
+/* ===== CONFIG ===== */
+const PASSWORD = "vibe";
+let state = "login";
+
+/* ===== ELEMENTS ===== */
+const term = document.getElementById("terminal");
+const input = document.getElementById("command");
+const wrap = document.getElementById("terminal-wrap");
+
+/* ===== MATRIX EFFECT ===== */
+const canvas=document.getElementById("matrix");
+const ctx=canvas.getContext("2d");
+function resize(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;}
+resize();window.addEventListener("resize",resize);
+const chars="01アカサタナハマヤラ0123456789";
+const fontSize=16;
+let columns=Math.floor(canvas.width/fontSize);
+let drops=Array(columns).fill(0);
+
+function drawMatrix(){
+  ctx.fillStyle="rgba(0,0,0,0.08)";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--fg');
+  ctx.font=fontSize+"px monospace";
+  drops.forEach((y,i)=>{
+    const text=chars[Math.floor(Math.random()*chars.length)];
+    ctx.fillText(text,i*fontSize,y*fontSize);
+    if(y*fontSize>canvas.height && Math.random()>0.98)drops[i]=0;
+    drops[i]++;
+  });
+}
+setInterval(drawMatrix,70);
+
+/* ===== BOOT → LOGIN ===== */
+setTimeout(()=>{
+  wrap.style.display="block";
+  print("SECURE SYSTEM ONLINE");
+  print("ENTER PASSWORD:");
+},4200);
+
+/* ===== AUDIO ===== */
+const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+function keySound(f=800,d=.03){
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type="square";o.frequency.value=f;
+  g.gain.setValueAtTime(.05,audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+d);
+  o.connect(g);g.connect(audioCtx.destination);
+  o.start();o.stop(audioCtx.currentTime+d);
+}
+
+/* ===== UTILS ===== */
+function print(t){term.innerHTML+=t+"\n";window.scrollTo(0,document.body.scrollHeight);}
+function clear(){term.innerHTML="";}
+function fullscreen(){if(!document.fullscreenElement)document.documentElement.requestFullscreen();}
+
+/* ===== SIMPLE AI ===== */
+function askAI(question){
+  const replies={
+    "你好":"你好，操作員。",
+    "你是誰":"我是 Cyber Core AI。",
+    "天氣":"我不會看天氣，但我會看代碼！",
+    "幫我":"可以啊，你想要我做什麼？"
+  };
+  for(let key in replies){
+    if(question.includes(key))return replies[key];
+  }
+  return "AI: 我不太懂你的意思...";
+}
+
+/* ===== THEME 切換 ===== */
+function setTheme(color){
+  let fg,glow,prompt;
+  switch(color){
+    case "blue": fg="#4fc3ff"; glow="rgba(79,195,255,.7)"; prompt="#00bfff"; break;
+    case "green": fg="#4fff4f"; glow="rgba(79,255,79,.7)"; prompt="#00ff00"; break;
+    case "red": fg="#ff4f4f"; glow="rgba(255,79,79,.7)"; prompt="#ff0000"; break;
+    default: fg="#4fc3ff"; glow="rgba(79,195,255,.7)"; prompt="#00bfff";
+  }
+  document.documentElement.style.setProperty("--fg",fg);
+  document.documentElement.style.setProperty("--glow",glow);
+  document.documentElement.style.setProperty("--prompt",prompt);
+}
+
+/* ===== INPUT HANDLER ===== */
+input.addEventListener("keydown",e=>{
+  keySound();
+  if(e.key==="Enter"){
+    const cmd=input.value.trim();
+    print("> "+cmd);
+
+    if(state==="login"){
+      if(cmd===PASSWORD){
+        fullscreen();
+        print("ACCESS GRANTED");
+        print("TYPE 'help'\n");
+        state="terminal";
+      }else{
+        print("ACCESS DENIED");
+      }
+    }else{
+      if(cmd.startsWith("ai ")){
+        const question=cmd.slice(3).trim();
+        print(askAI(question));
+      }else if(cmd.startsWith("theme ")){
+        const color=cmd.split(" ")[1];
+        setTheme(color);
+        print("Theme set to "+color);
+      }else if(cmd==="help"){
+        print("help | whoami | clear | logout | font <size> | ai <問題> | theme <blue|green|red>");
+      }else if(cmd==="whoami"){
+        print("operator@cyber-core");
+      }else if(cmd==="clear"){
+        clear();
+      }else if(cmd==="logout"){
+        state="login";
+        clear();
+        print("ENTER PASSWORD:");
+      }else if(cmd.startsWith("font ")){
+        const size=cmd.split(" ")[1];
+        if(size){document.documentElement.style.setProperty("--font",size+"px");print("Font set to "+size);} 
+        else print("usage: font 14|18|24");
+      }else{
+        print("command not found");
+      }
+    }
+    input.value="";
+  }
+});
+</script>
+
+</body>
+</html>
+
+
