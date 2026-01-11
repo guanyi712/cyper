@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <title>Cyber Core Terminal</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <style>
 :root{
-  --fg:#4fc3ff;     /* 預設藍色 */
+  --fg:#4fc3ff;
   --glow:rgba(79,195,255,.7);
   --prompt:#00bfff;
   --font:16px;
@@ -43,32 +44,34 @@ body{
 }
 
 .logo{
-  font-size:48px;
-  letter-spacing:6px;
+  font-size:8vw;
+  letter-spacing:0.5em;
   animation:glow 1.5s ease-in-out infinite alternate;
 }
 
 .scanline{
-  width:300px;
+  width:40vw;
   height:2px;
   background:var(--fg);
-  margin-top:20px;
+  margin-top:2vh;
   animation:scan 2s linear infinite;
 }
 
 @keyframes glow{from{opacity:.6;}to{opacity:1;}}
-@keyframes scan{from{transform:translateX(-150px);}to{transform:translateX(150px);}}
+@keyframes scan{from{transform:translateX(-20vw);}to{transform:translateX(20vw);}}
 @keyframes fadeOut{to{opacity:0;visibility:hidden;}}
 
 /* ===== TERMINAL ===== */
 #terminal-wrap{
   position:relative;
   z-index:2;
-  padding:20px;
+  padding:2vh 2vw;
   display:none;
+  height:100vh;
+  box-sizing:border-box;
 }
 
-#terminal{white-space:pre-wrap;}
+#terminal{white-space:pre-wrap; word-break:break-word;}
 #input-line{display:flex;align-items:center;}
 .prompt{margin-right:6px;color:var(--prompt);}
 input{
@@ -76,9 +79,12 @@ input{
   border:none;
   outline:none;
   color:var(--fg);
-  font-size:inherit;
+  font-size:var(--font);
   flex:1;
   caret-color:var(--prompt);
+}
+input::placeholder{
+  color:rgba(255,255,255,0.3);
 }
 </style>
 </head>
@@ -89,14 +95,14 @@ input{
 <div id="boot">
   <div class="logo">CYBER CORE</div>
   <div class="scanline"></div>
-  <div style="margin-top:20px;opacity:.6">INITIALIZING SYSTEM</div>
+  <div style="margin-top:2vh;opacity:.6;font-size:4vw">INITIALIZING SYSTEM</div>
 </div>
 
 <div id="terminal-wrap">
   <div id="terminal"></div>
   <div id="input-line">
     <span class="prompt">&gt;</span>
-    <input id="command" autofocus />
+    <input id="command" placeholder="輸入命令即可操作" />
   </div>
 </div>
 
@@ -113,10 +119,19 @@ const wrap = document.getElementById("terminal-wrap");
 /* ===== MATRIX EFFECT ===== */
 const canvas=document.getElementById("matrix");
 const ctx=canvas.getContext("2d");
-function resize(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;}
-resize();window.addEventListener("resize",resize);
+let fontSize = window.innerWidth < 600 ? 12 : 16;
+
+function resize(){
+  canvas.width=window.innerWidth;
+  canvas.height=window.innerHeight;
+  fontSize = window.innerWidth < 600 ? 12 : 16;
+  columns=Math.floor(canvas.width/fontSize);
+  drops=Array(columns).fill(0);
+}
+window.addEventListener("resize",resize);
+resize();
+
 const chars="01アカサタナハマヤラ0123456789";
-const fontSize=16;
 let columns=Math.floor(canvas.width/fontSize);
 let drops=Array(columns).fill(0);
 
@@ -143,6 +158,10 @@ setTimeout(()=>{
 
 /* ===== AUDIO ===== */
 const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+document.body.addEventListener("touchstart", ()=>{
+    audioCtx.resume();
+},{once:true});
+
 function keySound(f=800,d=.03){
   const o=audioCtx.createOscillator(),g=audioCtx.createGain();
   o.type="square";o.frequency.value=f;
@@ -155,7 +174,6 @@ function keySound(f=800,d=.03){
 /* ===== UTILS ===== */
 function print(t){term.innerHTML+=t+"\n";window.scrollTo(0,document.body.scrollHeight);}
 function clear(){term.innerHTML="";}
-function fullscreen(){if(!document.fullscreenElement)document.documentElement.requestFullscreen();}
 
 /* ===== SIMPLE AI ===== */
 function askAI(question){
@@ -185,48 +203,47 @@ function setTheme(color){
   document.documentElement.style.setProperty("--prompt",prompt);
 }
 
-/* ===== INPUT HANDLER ===== */
-input.addEventListener("keydown",e=>{
+/* ===== COMMAND HANDLER ===== */
+function handleCommand(cmd){
+  print("> "+cmd);
+  if(state==="login"){
+    if(cmd===PASSWORD){
+      print("ACCESS GRANTED");
+      state="terminal";
+      print("TYPE 'help'");
+    }else{
+      print("ACCESS DENIED");
+    }
+  } else {
+    if(cmd.startsWith("ai ")){
+      const question=cmd.slice(3).trim();
+      print(askAI(question));
+    }else if(cmd.startsWith("theme ")){
+      setTheme(cmd.split(" ")[1]);
+      print("Theme set");
+    }else if(cmd==="help"){
+      print("help | whoami | clear | logout | font <size> | ai <問題> | theme <blue|green|red>");
+    }else if(cmd==="whoami"){
+      print("operator@cyber-core");
+    }else if(cmd==="clear"){
+      clear();
+    }else if(cmd==="logout"){
+      state="login";
+      clear();
+      print("ENTER PASSWORD:");
+    }else if(cmd.startsWith("font ")){
+      document.documentElement.style.setProperty("--font",cmd.split(" ")[1]+"px");
+      print("Font size changed");
+    }else{
+      print("command not found");
+    }
+  }
+}
+
+input.addEventListener("keypress", e=>{
   keySound();
   if(e.key==="Enter"){
-    const cmd=input.value.trim();
-    print("> "+cmd);
-
-    if(state==="login"){
-      if(cmd===PASSWORD){
-        fullscreen();
-        print("ACCESS GRANTED");
-        print("TYPE 'help'\n");
-        state="terminal";
-      }else{
-        print("ACCESS DENIED");
-      }
-    }else{
-      if(cmd.startsWith("ai ")){
-        const question=cmd.slice(3).trim();
-        print(askAI(question));
-      }else if(cmd.startsWith("theme ")){
-        const color=cmd.split(" ")[1];
-        setTheme(color);
-        print("Theme set to "+color);
-      }else if(cmd==="help"){
-        print("help | whoami | clear | logout | font <size> | ai <問題> | theme <blue|green|red>");
-      }else if(cmd==="whoami"){
-        print("operator@cyber-core");
-      }else if(cmd==="clear"){
-        clear();
-      }else if(cmd==="logout"){
-        state="login";
-        clear();
-        print("ENTER PASSWORD:");
-      }else if(cmd.startsWith("font ")){
-        const size=cmd.split(" ")[1];
-        if(size){document.documentElement.style.setProperty("--font",size+"px");print("Font set to "+size);} 
-        else print("usage: font 14|18|24");
-      }else{
-        print("command not found");
-      }
-    }
+    handleCommand(input.value.trim());
     input.value="";
   }
 });
@@ -234,5 +251,3 @@ input.addEventListener("keydown",e=>{
 
 </body>
 </html>
-
-
